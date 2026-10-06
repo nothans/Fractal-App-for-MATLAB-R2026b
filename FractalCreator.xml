@@ -1,0 +1,356 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<MATLABApp schemaVersion='1.0.0' release='R2026b.0' minRelease='R2026b'>
+    <UIFigure name='UIFigure'>
+        <AutoResizeChildren>'off'</AutoResizeChildren>
+        <CloseRequestFcn>CloseRequestFcn</CloseRequestFcn>
+        <Name>'Fractal Creator'</Name>
+        <Position>[100 100 1200 780]</Position>
+        <WindowScrollWheelFcn>UIFigureWindowScrollWheel</WindowScrollWheelFcn>
+        <Children>
+            <GridLayout name='MainGrid'>
+                <ColumnSpacing>0</ColumnSpacing>
+                <ColumnWidth>{280, '1x'}</ColumnWidth>
+                <Padding>[0 0 0 0]</Padding>
+                <RowHeight>{'1x'}</RowHeight>
+                <Children>
+                    <Panel name='ControlPanel'>
+                        <AutoResizeChildren>'off'</AutoResizeChildren>
+                        <Layout>
+                            <Column>1</Column>
+                            <Row>1</Row>
+                        </Layout>
+                        <Children>
+                            <GridLayout name='ControlGrid'>
+                                <ColumnWidth>{'fit', '1x'}</ColumnWidth>
+                                <Padding>[12 12 12 12]</Padding>
+                                <RowHeight>{'fit', 'fit', 'fit', 'fit', 'fit', 'fit', 'fit', 'fit', 'fit', 'fit', 'fit', 'fit', 'fit', 'fit', 'fit', 'fit', '1x'}</RowHeight>
+                                <RowSpacing>8</RowSpacing>
+                                <Scrollable>'on'</Scrollable>
+                                <Children>
+                                    <Label name='FractalHeading'>
+                                        <FontWeight>'bold'</FontWeight>
+                                        <Layout>
+                                            <Column>[1 2]</Column>
+                                            <Row>1</Row>
+                                        </Layout>
+                                        <Text>'Fractal'</Text>
+                                    </Label>
+                                    <Label name='TypeLabel'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>2</Row>
+                                        </Layout>
+                                        <Text>'Type'</Text>
+                                    </Label>
+                                    <DropDown name='TypeDropDown' label='TypeLabel'>
+                                        <Items>{'Mandelbrot', 'Julia', 'Burning Ship', 'Tricorn', 'Newton'}</Items>
+                                        <Layout>
+                                            <Column>2</Column>
+                                            <Row>2</Row>
+                                        </Layout>
+                                        <Value>'Mandelbrot'</Value>
+                                        <ValueChangedFcn>TypeDropDownValueChanged</ValueChangedFcn>
+                                    </DropDown>
+                                    <Label name='PresetLabel'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>3</Row>
+                                        </Layout>
+                                        <Text>'Preset'</Text>
+                                    </Label>
+                                    <DropDown name='PresetDropDown' label='PresetLabel'>
+                                        <Items>{'Full set'}</Items>
+                                        <Layout>
+                                            <Column>2</Column>
+                                            <Row>3</Row>
+                                        </Layout>
+                                        <Tooltip>'Jump to a known view. Sets the view, iterations, and Julia constant.'</Tooltip>
+                                        <Value>'Full set'</Value>
+                                        <ValueChangedFcn>PresetDropDownValueChanged</ValueChangedFcn>
+                                    </DropDown>
+                                    <Label name='PowerLabel'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>4</Row>
+                                        </Layout>
+                                        <Text>'Power'</Text>
+                                    </Label>
+                                    <Spinner name='PowerSpinner' label='PowerLabel'>
+                                        <Layout>
+                                            <Column>2</Column>
+                                            <Row>4</Row>
+                                        </Layout>
+                                        <Limits>[2 8]</Limits>
+                                        <RoundFractionalValues>'on'</RoundFractionalValues>
+                                        <Tooltip>'Exponent p in z^p + c (Mandelbrot, Julia) or z^p - 1 (Newton)'</Tooltip>
+                                        <Value>2</Value>
+                                        <ValueChangedFcn>FractalParameterChanged</ValueChangedFcn>
+                                        <ValueDisplayFormat>'%.0f'</ValueDisplayFormat>
+                                    </Spinner>
+                                    <Label name='JuliaReLabel'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>5</Row>
+                                        </Layout>
+                                        <Text>'Julia c, real'</Text>
+                                    </Label>
+                                    <Spinner name='JuliaReSpinner' label='JuliaReLabel'>
+                                        <Layout>
+                                            <Column>2</Column>
+                                            <Row>5</Row>
+                                        </Layout>
+                                        <Limits>[-2 2]</Limits>
+                                        <Step>0.01</Step>
+                                        <Value>-0.8</Value>
+                                        <ValueChangedFcn>FractalParameterChanged</ValueChangedFcn>
+                                        <ValueDisplayFormat>'%.4f'</ValueDisplayFormat>
+                                    </Spinner>
+                                    <Label name='JuliaImLabel'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>6</Row>
+                                        </Layout>
+                                        <Text>'Julia c, imaginary'</Text>
+                                    </Label>
+                                    <Spinner name='JuliaImSpinner' label='JuliaImLabel'>
+                                        <Layout>
+                                            <Column>2</Column>
+                                            <Row>6</Row>
+                                        </Layout>
+                                        <Limits>[-2 2]</Limits>
+                                        <Step>0.01</Step>
+                                        <Value>0.156</Value>
+                                        <ValueChangedFcn>FractalParameterChanged</ValueChangedFcn>
+                                        <ValueDisplayFormat>'%.4f'</ValueDisplayFormat>
+                                    </Spinner>
+                                    <Label name='IterationsLabel'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>7</Row>
+                                        </Layout>
+                                        <Text>'Max iterations'</Text>
+                                    </Label>
+                                    <Spinner name='IterationsSpinner' label='IterationsLabel'>
+                                        <Layout>
+                                            <Column>2</Column>
+                                            <Row>7</Row>
+                                        </Layout>
+                                        <Limits>[20 5000]</Limits>
+                                        <RoundFractionalValues>'on'</RoundFractionalValues>
+                                        <Step>50</Step>
+                                        <Tooltip>'More iterations resolve more detail near the boundary and take longer'</Tooltip>
+                                        <Value>300</Value>
+                                        <ValueChangedFcn>FractalParameterChanged</ValueChangedFcn>
+                                        <ValueDisplayFormat>'%.0f'</ValueDisplayFormat>
+                                    </Spinner>
+                                    <Label name='ResolutionLabel'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>8</Row>
+                                        </Layout>
+                                        <Text>'Resolution'</Text>
+                                    </Label>
+                                    <DropDown name='ResolutionDropDown' label='ResolutionLabel'>
+                                        <Items>{'640 x 480', '960 x 720', '1600 x 1200'}</Items>
+                                        <ItemsData>[640 960 1600]</ItemsData>
+                                        <Layout>
+                                            <Column>2</Column>
+                                            <Row>8</Row>
+                                        </Layout>
+                                        <Value>960</Value>
+                                        <ValueChangedFcn>FractalParameterChanged</ValueChangedFcn>
+                                    </DropDown>
+                                    <Label name='ColorHeading'>
+                                        <FontWeight>'bold'</FontWeight>
+                                        <Layout>
+                                            <Column>[1 2]</Column>
+                                            <Row>9</Row>
+                                        </Layout>
+                                        <Text>'Color'</Text>
+                                    </Label>
+                                    <Label name='ColormapLabel'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>10</Row>
+                                        </Layout>
+                                        <Text>'Colormap'</Text>
+                                    </Label>
+                                    <DropDown name='ColormapDropDown' label='ColormapLabel'>
+                                        <Items>{'hot', 'turbo', 'nebula', 'abyss', 'sky', 'copper', 'bone', 'parula', 'cool', 'spring', 'winter', 'pink', 'hsv'}</Items>
+                                        <Layout>
+                                            <Column>2</Column>
+                                            <Row>10</Row>
+                                        </Layout>
+                                        <Value>'hot'</Value>
+                                        <ValueChangedFcn>ColorSettingChanged</ValueChangedFcn>
+                                    </DropDown>
+                                    <Label name='DensityLabel'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>11</Row>
+                                        </Layout>
+                                        <Text>'Density'</Text>
+                                    </Label>
+                                    <Spinner name='DensitySpinner' label='DensityLabel'>
+                                        <Layout>
+                                            <Column>2</Column>
+                                            <Row>11</Row>
+                                        </Layout>
+                                        <Limits>[0.25 8]</Limits>
+                                        <Step>0.25</Step>
+                                        <Tooltip>'How many times the colormap repeats across the iteration range'</Tooltip>
+                                        <Value>1</Value>
+                                        <ValueChangedFcn>ColorSettingChanged</ValueChangedFcn>
+                                        <ValueDisplayFormat>'%.2f'</ValueDisplayFormat>
+                                    </Spinner>
+                                    <Label name='OffsetLabel'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>12</Row>
+                                        </Layout>
+                                        <Text>'Offset'</Text>
+                                    </Label>
+                                    <Slider name='OffsetSlider' label='OffsetLabel'>
+                                        <Layout>
+                                            <Column>2</Column>
+                                            <Row>12</Row>
+                                        </Layout>
+                                        <Limits>[0 1]</Limits>
+                                        <MajorTickLabels>{'0', '0.5', '1'}</MajorTickLabels>
+                                        <MajorTicks>[0 0.5 1]</MajorTicks>
+                                        <MinorTicksMode>'manual'</MinorTicksMode>
+                                        <Tooltip>'Shifts colors along the colormap'</Tooltip>
+                                        <ValueChangedFcn>ColorSettingChanged</ValueChangedFcn>
+                                        <ValueChangingFcn>OffsetSliderValueChanging</ValueChangingFcn>
+                                    </Slider>
+                                    <Label name='InsideColorLabel'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>13</Row>
+                                        </Layout>
+                                        <Text>'Inside color'</Text>
+                                    </Label>
+                                    <ColorPicker name='InsideColorPicker' label='InsideColorLabel'>
+                                        <Layout>
+                                            <Column>2</Column>
+                                            <Row>13</Row>
+                                        </Layout>
+                                        <Tooltip>'Color for points that never escape (or never converge for Newton)'</Tooltip>
+                                        <Value>[0 0 0]</Value>
+                                        <ValueChangedFcn>ColorSettingChanged</ValueChangedFcn>
+                                    </ColorPicker>
+                                    <CheckBox name='SmoothCheckBox'>
+                                        <Layout>
+                                            <Column>[1 2]</Column>
+                                            <Row>14</Row>
+                                        </Layout>
+                                        <Text>'Smooth shading'</Text>
+                                        <Tooltip>'Continuous escape count instead of integer bands'</Tooltip>
+                                        <Value>true</Value>
+                                        <ValueChangedFcn>ColorSettingChanged</ValueChangedFcn>
+                                    </CheckBox>
+                                    <GridLayout name='ActionGrid'>
+                                        <ColumnSpacing>8</ColumnSpacing>
+                                        <Layout>
+                                            <Column>[1 2]</Column>
+                                            <Row>15</Row>
+                                        </Layout>
+                                        <Padding>[0 0 0 0]</Padding>
+                                        <RowHeight>{'fit', 'fit'}</RowHeight>
+                                        <RowSpacing>8</RowSpacing>
+                                        <Children>
+                                            <Button name='RenderButton'>
+                                                <ButtonPushedFcn>RenderButtonPushed</ButtonPushedFcn>
+                                                <Layout>
+                                                    <Column>1</Column>
+                                                    <Row>1</Row>
+                                                </Layout>
+                                                <Text>'Render'</Text>
+                                            </Button>
+                                            <Button name='CancelButton'>
+                                                <ButtonPushedFcn>CancelButtonPushed</ButtonPushedFcn>
+                                                <Enable>'off'</Enable>
+                                                <Layout>
+                                                    <Column>2</Column>
+                                                    <Row>1</Row>
+                                                </Layout>
+                                                <Text>'Cancel'</Text>
+                                            </Button>
+                                            <Button name='ResetViewButton'>
+                                                <ButtonPushedFcn>ResetViewButtonPushed</ButtonPushedFcn>
+                                                <Layout>
+                                                    <Column>1</Column>
+                                                    <Row>2</Row>
+                                                </Layout>
+                                                <Text>'Reset view'</Text>
+                                            </Button>
+                                            <Button name='SaveButton'>
+                                                <ButtonPushedFcn>SaveButtonPushed</ButtonPushedFcn>
+                                                <Layout>
+                                                    <Column>2</Column>
+                                                    <Row>2</Row>
+                                                </Layout>
+                                                <Text>'Save PNG'</Text>
+                                            </Button>
+                                        </Children>
+                                    </GridLayout>
+                                    <Label name='HintLabel'>
+                                        <Layout>
+                                            <Column>[1 2]</Column>
+                                            <Row>16</Row>
+                                        </Layout>
+                                        <Text>'Click to zoom in. Right-click to zoom out. Scroll to zoom around the pointer. Shift-click the Mandelbrot set to open the Julia set for that point.'</Text>
+                                        <VerticalAlignment>'top'</VerticalAlignment>
+                                        <WordWrap>'on'</WordWrap>
+                                    </Label>
+                                </Children>
+                            </GridLayout>
+                        </Children>
+                    </Panel>
+                    <Panel name='DisplayPanel'>
+                        <AutoResizeChildren>'off'</AutoResizeChildren>
+                        <Layout>
+                            <Column>2</Column>
+                            <Row>1</Row>
+                        </Layout>
+                        <Children>
+                            <GridLayout name='DisplayGrid'>
+                                <ColumnWidth>{'1x'}</ColumnWidth>
+                                <Padding>[8 8 8 8]</Padding>
+                                <RowHeight>{'1x', 'fit'}</RowHeight>
+                                <RowSpacing>6</RowSpacing>
+                                <Children>
+                                    <UIAxes name='UIAxes'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>1</Row>
+                                        </Layout>
+                                    </UIAxes>
+                                    <Label name='StatusLabel'>
+                                        <Layout>
+                                            <Column>1</Column>
+                                            <Row>2</Row>
+                                        </Layout>
+                                        <Text>'Ready'</Text>
+                                    </Label>
+                                </Children>
+                            </GridLayout>
+                        </Children>
+                    </Panel>
+                </Children>
+            </GridLayout>
+        </Children>
+    </UIFigure>
+    <RunConfiguration>
+        <StartupFcn>startupFcn</StartupFcn>
+    </RunConfiguration>
+    <AppDetails>
+        <Name>FractalCreator</Name>
+        <Version>1.0</Version>
+    </AppDetails>
+    <InternalData>
+        <AppId>de2ea148-ff2f-f7c2-6ecf-a0deacb6a2b0</AppId>
+    </InternalData>
+    <!-- Thumbnail is used by file previewers. To change how the thumbnail is captured or stored, use the App Details dialog box in App Designer. -->
+    <Thumbnail autoCapture='true'></Thumbnail>
+</MATLABApp>
