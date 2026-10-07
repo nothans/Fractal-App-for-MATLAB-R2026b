@@ -83,6 +83,46 @@ end
 verifyEqual(testCase, values, whole.Values);
 end
 
+function testFullViewFramesWholeSet(testCase)
+% Each full view contains the whole set, measured on a finer grid with more
+% iterations, and the set fills most of the view along one axis.
+cases = {"Mandelbrot", 2, 0; "Mandelbrot", 3, 0; "Mandelbrot", 4, 0; "Mandelbrot", 8, 0
+    "Burning Ship", 2, 0; "Tricorn", 2, 0
+    "Julia", 2, complex(-0.8, 0.156); "Julia", 2, complex(-0.123, 0.745); "Julia", 2, 1i
+    "Julia", 2, -1.9; "Julia", 2, complex(0.3, 0.5); "Julia", 3, complex(0.4, 0.2)};
+g = linspace(-2.5, 2.5, 801);
+[gx, gy] = meshgrid(g);
+for k = 1:size(cases, 1)
+    params = struct(Type=cases{k, 1}, Power=cases{k, 2}, JuliaC=cases{k, 3});
+    label = sprintf("%s, power %d, c = %s", params.Type, params.Power, num2str(params.JuliaC));
+    view = FractalCreator.fullView(params);
+    spec = params;
+    spec.MaxIter = 500;
+    [values, inside] = FractalCreator.iterateFractal(complex(gx, gy), spec);
+    % Julia sets without interior (dendrites, dust) show as slow-escaping points.
+    visible = inside | values > 100;
+    x = gx(visible);
+    y = gy(visible);
+    halfW = view.Width / 2;
+    halfH = halfW * 3 / 4;
+    verifyGreaterThan(testCase, min(x), real(view.Center) - halfW, label);
+    verifyLessThan(testCase, max(x), real(view.Center) + halfW, label);
+    verifyGreaterThan(testCase, min(y), imag(view.Center) - halfH, label);
+    verifyLessThan(testCase, max(y), imag(view.Center) + halfH, label);
+    fill = max((max(x) - min(x)) / (2 * halfW), (max(y) - min(y)) / (2 * halfH));
+    verifyGreaterThan(testCase, fill, 0.7, label);
+end
+end
+
+function testFullViewWithoutVisibleSet(testCase)
+% A Julia constant far outside the Mandelbrot set leaves nothing to frame;
+% Newton's method has no bounded set. Both get the fixed 4-wide view at 0.
+for params = [struct(Type="Julia", Power=2, JuliaC=complex(2, 2)), ...
+        struct(Type="Newton", Power=3, JuliaC=0)]
+    verifyEqual(testCase, FractalCreator.fullView(params), struct(Center=0, Width=4), params.Type);
+end
+end
+
 function r = render(type, points, maxIter, opts)
 % Render each complex point as its own tiny view and collect the first pixel.
 arguments

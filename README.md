@@ -41,8 +41,11 @@ Newton colors each pixel by the root it converges to and darkens pixels that con
 - Click to zoom in 2x at the pointer, right-click to zoom out 2x, or scroll to zoom around the pointer.
 - Shift-click in the Mandelbrot view to open the Julia set for the point under the pointer.
 - Presets jump to known views, including Seahorse Valley, Elephant Valley, a Mandelbrot spiral, a mini Mandelbrot, the Douady rabbit, and the Burning Ship armada.
+- Reset view and each type's full-view preset frame the whole set.
+  A full view refits when the power or the Julia constant changes.
 - Colormap, density, offset, smooth shading, and inside color recolor the current image without recomputing it.
-- Save PNG writes the image at render resolution and stores the parameters as JSON in the PNG `Comment` field.
+- Save PNG writes the computed pixels exactly, at render resolution, and stores the parameters as JSON in the PNG `Comment` field.
+  Read them back with `jsondecode(imfinfo(file).Comment)`.
 
 Scripts and tests drive the same actions through two public methods, `clickImage(point, selectionType)` and `zoomAt(point, factor, keepPointFixed)`, and save images with `exportImage(file)`.
 
@@ -64,8 +67,8 @@ results = runtests("tests")
 ```
 
 - `tests/testRenderFractal.m` checks the render kernel against known points: the Mandelbrot set on the real axis, the unit disk for the Julia set with c = 0, and the roots of z³ − 1 for Newton's method.
-  It also checks that splitting a render across tasks reproduces the single-task image exactly.
-- `tests/FractalCreatorAppTest.m` launches the app and fires the same callbacks a user's clicks fire: zoom, Julia from a Shift-click, presets, cancel, recoloring, export, and closing during a render.
+  It also checks that splitting a render across tasks reproduces the single-task image exactly, and that each computed full view contains its whole set.
+- `tests/FractalCreatorAppTest.m` launches the app and fires the same callbacks a user's clicks fire: zoom, Julia from a Shift-click, presets, full views, Reset view, cancel, recoloring, export, and closing during a render.
 
 ## Tutorial, part 1: building the app
 
@@ -219,6 +222,56 @@ The eight-task times are measured in the running app, from the start of a render
 Heavy views gain the most: the full set takes 1.36 s to 1.45 s in the app, against 7.45 s for one-task compute.
 The deep spiral view gains nothing, because most of its time is spent coloring and drawing on the main thread.
 The first render after launch takes about 6 s while the eight workers start.
+
+## Tutorial, part 3: design review
+
+A design review with a MATLAB user produced one bug report and four questions about the code.
+
+### 1. Compute the full views
+
+The Burning Ship "Full ship" preset cut off the top of the set.
+The kernel conjugates c so the ship sits upright, but the preset's center was written for the unconjugated plane, so its imaginary part had the wrong sign.
+Measuring every full view against a fine render of its set found three more cases.
+The Tricorn view clipped its top and bottom tips, the Mandelbrot view kept the power-2 framing for powers 3 to 8, and the Julia set from a Shift-click near c = −2 overflowed the fixed 3.4-wide view.
+
+The hand-tuned full views were replaced by a computed one.
+`FractalCreator.fullView` renders the plane on a 241 x 241 grid for 20 iterations, takes the bounding box of the points that stay bounded, pads it by one grid step, and frames it at 4:3 with a 25% margin.
+It takes under 15 ms, so the app calls it on the main thread whenever a full view renders, including after a change of power or Julia constant.
+The padding and margin cover thin filaments that fall between grid points.
+A kernel test checks containment for 12 sets, and an app test switches types in the running app.
+Both fail on the old presets.
+
+### 2. Remove drawnow
+
+The progress callback ended with `drawnow limitrate`.
+To test whether it was needed, the screen was captured every 250 ms during a 10 s render, with and without the call.
+Both runs showed the same sequence: the preview, then about seven partial paints as bands arrived.
+MATLAB already updates the figure between `DataQueue` callbacks, so the call was removed.
+
+### 3. Vectorize the inside color
+
+`colorize` assigned the inside color one channel at a time in a loop.
+It now looks up one colormap row per pixel, assigns the inside rows in one statement, and reshapes once.
+The output is bit-identical.
+A 1600 x 1200 recolor, which runs on every event while the offset slider is dragged, now takes 30 ms instead of 51 ms.
+
+### 4. Keep imwrite for export
+
+`exportgraphics` captures the axes as drawn on screen.
+At its default resolution it wrote 1362 x 1024 pixels for a 1600 x 1200 render.
+With the size forced to 1600 x 1200, 38% of its pixels differed from the computed image, by up to 218 of 255 levels, because it resamples the screen rendering.
+`imwrite` writes the computed pixels exactly.
+The parameters go into the PNG's own `Comment` text field, not a separate file, so the image carries what is needed to reproduce it.
+
+### 5. Normalize property defaults
+
+The mix of `[]` and `[  ]` in the properties block came from the agent interface.
+`AppDesignerAgentInterface.open()` reparses every property default and writes `[]` back as `[  ]`, while properties added in the same session keep the form they were given.
+Resetting each default with `addProperty` and a native value before `save()` makes the block consistent.
+
+In the same toolkit version (0.3.2), `open()` also dropped the first character of every line of every callback body, so `app.` became `pp.`.
+`save()` wrote the broken file, then refused it because the app no longer loaded.
+The file was restored, and the edit was redone with each callback body set again from the source text before `save()`.
 
 ## License
 

@@ -51,14 +51,15 @@ classdef FractalCreator < matlab.apps.App
     properties (Access = private)
         Assembly = []
         ColorsChanged = false
-        FractalImage = [  ]
+        FractalImage = []
+        FullViewMode = false
         PartsLeft = 0
-        PendingSpec = [  ]
-        Presets = [  ]
+        PendingSpec = []
+        Presets = []
         RenderCancelled = false
         RenderError = []
         RenderStart = []
-        RenderTask = struct( 'Fcn', [  ], 'CompleteFcn', [  ], 'ProgressFcn', [  ], 'Future', [  ], 'Queue', [  ], 'Running', false, 'StopRequested', false, 'Generation', 0 )
+        RenderTask = struct('Fcn', [], 'CompleteFcn', [], 'ProgressFcn', [], 'Future', [], 'Queue', [], 'Running', false, 'StopRequested', false, 'Generation', 0)
         RenderTask2 = struct('Fcn', [], 'CompleteFcn', [], 'ProgressFcn', [], 'Future', [], 'Queue', [], 'Running', false, 'StopRequested', false, 'Generation', 0)
         RenderTask3 = struct('Fcn', [], 'CompleteFcn', [], 'ProgressFcn', [], 'Future', [], 'Queue', [], 'Running', false, 'StopRequested', false, 'Generation', 0)
         RenderTask4 = struct('Fcn', [], 'CompleteFcn', [], 'ProgressFcn', [], 'Future', [], 'Queue', [], 'Running', false, 'StopRequested', false, 'Generation', 0)
@@ -67,9 +68,9 @@ classdef FractalCreator < matlab.apps.App
         RenderTask7 = struct('Fcn', [], 'CompleteFcn', [], 'ProgressFcn', [], 'Future', [], 'Queue', [], 'Running', false, 'StopRequested', false, 'Generation', 0)
         RenderTask8 = struct('Fcn', [], 'CompleteFcn', [], 'ProgressFcn', [], 'Future', [], 'Queue', [], 'Running', false, 'StopRequested', false, 'Generation', 0)
         RenderTasks = ["RenderTask" "RenderTask2" "RenderTask3" "RenderTask4" "RenderTask5" "RenderTask6" "RenderTask7" "RenderTask8"]
-        Result = [  ]
+        Result = []
         RowsDone = 0
-        View = [  ]
+        View = []
     end
 
     methods (Access = private)
@@ -79,7 +80,11 @@ classdef FractalCreator < matlab.apps.App
         if isempty(p)
             return
         end
-        app.View = struct(Center=p.Center, Width=p.Width);
+        % A preset without a width is a full view, framed to fit the set when it renders.
+        app.FullViewMode = isnan(p.Width);
+        if ~app.FullViewMode
+            app.View = struct(Center=p.Center, Width=p.Width);
+        end
         app.IterationsSpinner.Value = p.Iterations;
         app.PowerSpinner.Value = p.Power;
         if ~isnan(p.JuliaC)
@@ -90,19 +95,21 @@ classdef FractalCreator < matlab.apps.App
         end
 
         function presets = buildPresets(~)
-        % Known views. The first row for each type is its default view.
+        % Known views. The first row for each type is its full view. A NaN width
+        % marks a full view, which fullView frames to fit the set; each Julia
+        % preset is the full view of one constant.
         Type = ["Mandelbrot"; "Mandelbrot"; "Mandelbrot"; "Mandelbrot"; "Mandelbrot"; "Mandelbrot"
             "Julia"; "Julia"; "Julia"; "Julia"; "Julia"
             "Burning Ship"; "Burning Ship"; "Tricorn"; "Newton"];
         Name = ["Full set"; "Seahorse Valley"; "Elephant Valley"; "Spiral"; "Mini Mandelbrot"; "Branch junction"
             "Classic"; "Douady rabbit"; "Dendrite"; "Siegel disk"; "Spiral"
             "Full ship"; "Armada"; "Full set"; "Full view"];
-        Center = [-0.75; -0.7453 + 0.1127i; 0.2850 + 0.0110i; -0.77568377 + 0.13646737i; -1.7568; -0.1015 + 0.9563i
-            0; 0; 0; 0; 0
-            -0.5 - 0.6i; -1.755 + 0.02i; -0.3; 0];
-        Width = [3.5; 0.012; 0.012; 0.0004; 0.08; 0.012
-            3.4; 3.4; 3.4; 3.4; 3.4
-            3.8; 0.10; 4.0; 4.0];
+        Center = [NaN; -0.7453 + 0.1127i; 0.2850 + 0.0110i; -0.77568377 + 0.13646737i; -1.7568; -0.1015 + 0.9563i
+            NaN; NaN; NaN; NaN; NaN
+            NaN; -1.755 + 0.02i; NaN; NaN];
+        Width = [NaN; 0.012; 0.012; 0.0004; 0.08; 0.012
+            NaN; NaN; NaN; NaN; NaN
+            NaN; 0.10; NaN; NaN];
         Iterations = [300; 500; 500; 1200; 600; 800
             300; 300; 300; 400; 400
             200; 400; 200; 60];
@@ -122,14 +129,13 @@ classdef FractalCreator < matlab.apps.App
         halfW = app.View.Width / 2;
         halfH = halfW * h / w;
         c = app.View.Center;
-        spec = struct(Type=string(app.TypeDropDown.Value), ...
-            Power=app.PowerSpinner.Value, ...
-            JuliaC=complex(app.JuliaReSpinner.Value, app.JuliaImSpinner.Value), ...
-            MaxIter=app.IterationsSpinner.Value, ...
-            Width=w, Height=h, ...
-            XLim=real(c) + [-halfW halfW], ...
-            YLim=imag(c) + [-halfH halfH], ...
-            NumBands=3);
+        spec = app.fractalParams();
+        spec.MaxIter = app.IterationsSpinner.Value;
+        spec.Width = w;
+        spec.Height = h;
+        spec.XLim = real(c) + [-halfW halfW];
+        spec.YLim = imag(c) + [-halfH halfH];
+        spec.NumBands = 3;
         end
 
         function cancelRender(app)
@@ -159,14 +165,30 @@ classdef FractalCreator < matlab.apps.App
             t = 1 - abs(1 - 2 * t);
             shade = 1;
         end
-        rgb = reshape(cmap(1 + floor(t * 255.999), :), [size(v) 3]) .* shade;
-        inColor = single(app.InsideColorPicker.Value);
-        for ch = 1:3
-            layer = rgb(:, :, ch);
-            layer(inside) = inColor(ch);
-            rgb(:, :, ch) = layer;
+        % One row per pixel: look up the colors, paint the inside pixels, then fold
+        % the rows back into an image.
+        rgb = cmap(1 + floor(t(:) * 255.999), :) .* shade(:);
+        rgb(inside(:), :) = repmat(single(app.InsideColorPicker.Value), nnz(inside), 1);
+        rgb = reshape(uint8(255 * rgb), [size(v) 3]);
         end
-        rgb = uint8(255 * rgb);
+
+        function params = fractalParams(app)
+        % The settings that define the set itself, independent of the view.
+        params = struct(Type=string(app.TypeDropDown.Value), ...
+            Power=app.PowerSpinner.Value, ...
+            JuliaC=complex(app.JuliaReSpinner.Value, app.JuliaImSpinner.Value));
+        end
+
+        function name = fullViewPresetName(app)
+        % Name the full-view preset that matches the current settings, so the
+        % preset list stays accurate after Reset view or an edit to the Julia constant.
+        params = app.fractalParams();
+        p = app.Presets(app.Presets.Type == params.Type & isnan(app.Presets.Width), :);
+        match = isnan(p.JuliaC) | (p.JuliaC == params.JuliaC & p.Power == params.Power);
+        name = "Custom view";
+        if any(match)
+            name = p.Name(find(match, 1));
+        end
         end
 
         function tf = isRendering(app)
@@ -227,18 +249,17 @@ classdef FractalCreator < matlab.apps.App
         app.RowsDone = app.RowsDone + numel(data.Rows);
         app.StatusLabel.Text = sprintf("Rendering %s: %d%%", app.PendingSpec.Type, ...
             floor(100 * app.RowsDone / app.PendingSpec.Height));
-        drawnow limitrate
         end
 
         function openJulia(app, c)
-        % Switch to the Julia set whose constant is the clicked point.
+        % Switch to the Julia set whose constant is the clicked point, framed to fit.
         lim = app.JuliaReSpinner.Limits;
         app.TypeDropDown.Value = "Julia";
         app.refreshPresetList();
         app.JuliaReSpinner.Value = min(max(real(c), lim(1)), lim(2));
         app.JuliaImSpinner.Value = min(max(imag(c), lim(1)), lim(2));
-        app.PresetDropDown.Value = "Custom view";
-        app.View = struct(Center=0, Width=3.4);
+        app.FullViewMode = true;
+        app.PresetDropDown.Value = app.fullViewPresetName();
         app.updateEnables();
         app.requestRender();
         end
@@ -268,11 +289,14 @@ classdef FractalCreator < matlab.apps.App
         end
 
         function requestRender(app)
-        % Start a render with the current settings. The rows are interleaved across
-        % the render tasks, so each backgroundPool worker gets an even share of the
-        % expensive rows. A render already running is cancelled first, so the
-        % newest settings always win.
+        % Start a render with the current settings. A full view is refit to the
+        % current set first. The rows are interleaved across the render tasks, so
+        % each backgroundPool worker gets an even share of the expensive rows. A
+        % render already running is cancelled first, so the newest settings always win.
         app.cancelRender();
+        if app.FullViewMode
+            app.View = FractalCreator.fullView(app.fractalParams());
+        end
         spec = app.buildSpec();
         app.showPreview(spec);
         app.PendingSpec = spec;
@@ -346,8 +370,7 @@ classdef FractalCreator < matlab.apps.App
         function updateStatus(app)
         r = app.Result;
         s = r.Spec;
-        defaultWidth = app.Presets.Width(find(app.Presets.Type == s.Type, 1));
-        zoom = defaultWidth / diff(s.XLim);
+        zoom = FractalCreator.fullView(s).Width / diff(s.XLim);
         if zoom < 1e4
             zoomText = sprintf("%.0f", zoom);
         else
@@ -428,6 +451,7 @@ classdef FractalCreator < matlab.apps.App
             app.View.Center = point;
         end
         app.View.Width = newWidth;
+        app.FullViewMode = false;
         app.PresetDropDown.Value = "Custom view";
         app.requestRender();
         end
@@ -435,6 +459,31 @@ classdef FractalCreator < matlab.apps.App
     end
 
     methods (Static)
+
+        function view = fullView(params)
+        % Frame the whole set in a 4:3 view with a margin. The set's extent comes
+        % from a coarse render of the square |x|, |y| <= 2.5, which holds every
+        % bounded orbit the controls allow; points still bounded after 20
+        % iterations count as the set. Newton's method has no bounded set, so its
+        % view frames the roots of unity.
+        view = struct(Center=0, Width=4);
+        if params.Type == "Newton"
+            return
+        end
+        g = linspace(-2.5, 2.5, 241);
+        step = g(2) - g(1);
+        [gx, gy] = meshgrid(g);
+        params.MaxIter = 20;
+        [~, inside] = FractalCreator.iterateFractal(complex(gx, gy), params);
+        if ~any(inside, "all")
+            % A Julia constant far outside the Mandelbrot set leaves no visible set.
+            return
+        end
+        xl = [min(gx(inside)) max(gx(inside))] + [-step step];
+        yl = [min(gy(inside)) max(gy(inside))] + [-step step];
+        view = struct(Center=complex(mean(xl), mean(yl)), ...
+            Width=1.25 * max(diff(xl), diff(yl) * 4 / 3));
+        end
 
         function [values, inside, roots] = iterateFractal(pts, spec)
         % Smooth escape count for escape-time fractals, or root index and
@@ -705,6 +754,7 @@ classdef FractalCreator < matlab.apps.App
         function CloseRequestFcn(app, event)
             app.cleanupBackground();
             delete(app.UIFigure);
+            pp.cleanupBackground();
         end
 
         % Window scroll wheel function: UIFigure
@@ -737,6 +787,9 @@ classdef FractalCreator < matlab.apps.App
         % Value changed function: IterationsSpinner, JuliaImSpinner, 
         % ...and 3 other components
         function FractalParameterChanged(app, event)
+            if app.FullViewMode
+                app.PresetDropDown.Value = app.fullViewPresetName();
+            end
             app.requestRender();
         end
 
@@ -763,9 +816,8 @@ classdef FractalCreator < matlab.apps.App
 
         % Button pushed function: ResetViewButton
         function ResetViewButtonPushed(app, event)
-            p = app.Presets(find(app.Presets.Type == app.TypeDropDown.Value, 1), :);
-            app.View = struct(Center=p.Center, Width=p.Width);
-            app.PresetDropDown.Value = p.Name;
+            app.FullViewMode = true;
+            app.PresetDropDown.Value = app.fullViewPresetName();
             app.requestRender();
         end
 

@@ -37,26 +37,31 @@ classdef FractalCreatorAppTest < matlab.unittest.TestCase
     methods (Test)
         function startupRendersDefaultView(testCase)
             img = testCase.image();
+            full = testCase.fullView("Mandelbrot");
             testCase.verifySize(img.CData, [720 960 3]);
-            testCase.verifyEqual(diff(img.XData), 3.5, AbsTol=1e-12);
+            testCase.verifyEqual(diff(img.XData), full.Width, AbsTol=1e-12);
+            testCase.verifyEqual(mean(img.XData), real(full.Center), AbsTol=1e-12);
+            testCase.verifyTrue(contains(testCase.App.StatusLabel.Text, "zoom 1x"));
             testCase.verifyTrue(startsWith(testCase.App.StatusLabel.Text, "Mandelbrot"));
             testCase.verifyEqual(testCase.App.JuliaReSpinner.Enable, matlab.lang.OnOffSwitchState.off);
         end
 
         function clickZoomsInAtPoint(testCase)
+            full = testCase.fullView("Mandelbrot");
             testCase.App.clickImage(complex(-0.745, 0.11));
             testCase.waitForRender();
             img = testCase.image();
-            testCase.verifyEqual(diff(img.XData), 1.75, RelTol=1e-9);
+            testCase.verifyEqual(diff(img.XData), full.Width / 2, RelTol=1e-9);
             testCase.verifyEqual(mean(img.XData), -0.745, AbsTol=1e-12);
             testCase.verifyEqual(mean(img.YData), 0.11, AbsTol=1e-12);
             testCase.verifyEqual(string(testCase.App.PresetDropDown.Value), "Custom view");
         end
 
         function rightClickZoomsOut(testCase)
+            full = testCase.fullView("Mandelbrot");
             testCase.App.clickImage(-0.75, "alt");
             testCase.waitForRender();
-            testCase.verifyEqual(diff(testCase.image().XData), 7, RelTol=1e-9);
+            testCase.verifyEqual(diff(testCase.image().XData), 2 * full.Width, RelTol=1e-9);
         end
 
         function shiftClickOpensJuliaForPoint(testCase)
@@ -68,16 +73,83 @@ classdef FractalCreatorAppTest < matlab.unittest.TestCase
             testCase.verifyEqual(app.JuliaImSpinner.Value, 0.6, AbsTol=1e-12);
             testCase.verifyEqual(app.JuliaReSpinner.Enable, matlab.lang.OnOffSwitchState.on);
             testCase.verifyTrue(startsWith(app.StatusLabel.Text, "Julia"));
+            testCase.verifyEqual(string(app.PresetDropDown.Value), "Custom view");
+        end
+
+        function fullViewsShowWholeSet(testCase)
+            % Each type's full view contains its whole set. The Burning Ship
+            % and Tricorn presets once cut off the top of the set.
+            app = testCase.App;
+            for type = ["Burning Ship" "Tricorn" "Julia" "Mandelbrot"]
+                fire(app.TypeDropDown, type);
+                testCase.waitForRender();
+                testCase.verifyViewContainsSet(type);
+            end
+        end
+
+        function shiftClickFramesWideJuliaSet(testCase)
+            % The Julia set for c = -1.9 spans nearly [-2, 2] on the real axis.
+            testCase.App.clickImage(-1.9, "extend");
+            testCase.waitForRender();
+            testCase.verifyViewContainsSet("Julia");
+        end
+
+        function powerChangeRefitsFullView(testCase)
+            % Higher powers give sets centered on the origin; the full view follows.
+            app = testCase.App;
+            fire(app.PowerSpinner, 3);
+            testCase.waitForRender();
+            testCase.verifyEqual(mean(testCase.image().XData), 0, AbsTol=0.03);
+            testCase.verifyEqual(string(app.PresetDropDown.Value), "Full set");
+            testCase.verifyViewContainsSet("Mandelbrot");
+        end
+
+        function zoomedViewKeepsViewOnParameterChange(testCase)
+            % After a zoom, changing a parameter keeps the zoomed view.
+            app = testCase.App;
+            app.clickImage(complex(-0.745, 0.11));
+            testCase.waitForRender();
+            before = [testCase.image().XData testCase.image().YData];
+            fire(app.PowerSpinner, 3);
+            testCase.waitForRender();
+            testCase.verifyEqual([testCase.image().XData testCase.image().YData], before);
+            testCase.verifyEqual(string(app.PresetDropDown.Value), "Custom view");
+        end
+
+        function resetViewRestoresFullView(testCase)
+            app = testCase.App;
+            fire(app.TypeDropDown, "Burning Ship");
+            testCase.waitForRender();
+            full = [testCase.image().XData testCase.image().YData];
+            app.clickImage(complex(-1.75, 0));
+            testCase.waitForRender();
+            push(app.ResetViewButton);
+            testCase.waitForRender();
+            testCase.verifyEqual([testCase.image().XData testCase.image().YData], full, AbsTol=1e-12);
+            testCase.verifyEqual(string(app.PresetDropDown.Value), "Full ship");
+        end
+
+        function editingJuliaConstantRenamesPreset(testCase)
+            % A Julia preset names one constant; editing it makes the view custom.
+            app = testCase.App;
+            fire(app.TypeDropDown, "Julia");
+            testCase.waitForRender();
+            testCase.verifyEqual(string(app.PresetDropDown.Value), "Classic");
+            fire(app.JuliaReSpinner, -0.5);
+            testCase.waitForRender();
+            testCase.verifyEqual(string(app.PresetDropDown.Value), "Custom view");
+            testCase.verifyViewContainsSet("Julia");
         end
 
         function scrollZoomKeepsPointerFixed(testCase)
             % Scrolling zooms around the pointer: the point under it stays put.
+            full = testCase.fullView("Mandelbrot");
             pointer = complex(0, 0.5);
             testCase.App.zoomAt(pointer, 1 / 1.25, true);
             testCase.waitForRender();
             img = testCase.image();
-            expectedCenter = pointer + (-0.75 - pointer) / 1.25;
-            testCase.verifyEqual(diff(img.XData), 3.5 / 1.25, RelTol=1e-9);
+            expectedCenter = pointer + (full.Center - pointer) / 1.25;
+            testCase.verifyEqual(diff(img.XData), full.Width / 1.25, RelTol=1e-9);
             testCase.verifyEqual(mean(img.XData), real(expectedCenter), AbsTol=1e-12);
             testCase.verifyEqual(mean(img.YData), imag(expectedCenter), AbsTol=1e-12);
         end
@@ -175,6 +247,28 @@ classdef FractalCreatorAppTest < matlab.unittest.TestCase
 
         function img = image(testCase)
             img = findobj(testCase.App.UIAxes, Type="image");
+        end
+
+        function view = fullView(testCase, type)
+            app = testCase.App;
+            view = FractalCreator.fullView(struct(Type=type, Power=app.PowerSpinner.Value, ...
+                JuliaC=complex(app.JuliaReSpinner.Value, app.JuliaImSpinner.Value)));
+        end
+
+        function verifyViewContainsSet(testCase, type)
+            % Every point of the set, sampled on a fine grid, lies inside the
+            % image's extent.
+            app = testCase.App;
+            spec = struct(Type=type, Power=app.PowerSpinner.Value, ...
+                JuliaC=complex(app.JuliaReSpinner.Value, app.JuliaImSpinner.Value), MaxIter=300);
+            [gx, gy] = meshgrid(linspace(-2.5, 2.5, 601));
+            [values, inside] = FractalCreator.iterateFractal(complex(gx, gy), spec);
+            visible = inside | values > 100;
+            img = testCase.image();
+            testCase.verifyGreaterThan(min(gx(visible)), img.XData(1), type);
+            testCase.verifyLessThan(max(gx(visible)), img.XData(2), type);
+            testCase.verifyGreaterThan(min(gy(visible)), img.YData(1), type);
+            testCase.verifyLessThan(max(gy(visible)), img.YData(2), type);
         end
     end
 end
