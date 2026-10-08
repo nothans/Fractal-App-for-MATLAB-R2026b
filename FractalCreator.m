@@ -751,10 +751,9 @@ classdef FractalCreator < matlab.apps.App
         end
 
         % Close request function: UIFigure
-        function CloseRequestFcn(app, event)
+        function CloseRequestFcn(app, ~)
             app.cleanupBackground();
             delete(app.UIFigure);
-            pp.cleanupBackground();
         end
 
         % Window scroll wheel function: UIFigure
@@ -769,14 +768,14 @@ classdef FractalCreator < matlab.apps.App
         end
 
         % Value changed function: TypeDropDown
-        function TypeDropDownValueChanged(app, event)
+        function TypeDropDownValueChanged(app, ~)
             app.refreshPresetList();
             app.applyPreset(app.PresetDropDown.Value);
             app.requestRender();
         end
 
         % Value changed function: PresetDropDown
-        function PresetDropDownValueChanged(app, event)
+        function PresetDropDownValueChanged(app, ~)
             if app.PresetDropDown.Value == "Custom view"
                 return
             end
@@ -786,7 +785,7 @@ classdef FractalCreator < matlab.apps.App
 
         % Value changed function: IterationsSpinner, JuliaImSpinner, 
         % ...and 3 other components
-        function FractalParameterChanged(app, event)
+        function FractalParameterChanged(app, ~)
             if app.FullViewMode
                 app.PresetDropDown.Value = app.fullViewPresetName();
             end
@@ -795,7 +794,7 @@ classdef FractalCreator < matlab.apps.App
 
         % Value changed function: ColormapDropDown, DensitySpinner, 
         % ...and 3 other components
-        function ColorSettingChanged(app, event)
+        function ColorSettingChanged(app, ~)
             app.recolor();
         end
 
@@ -805,24 +804,24 @@ classdef FractalCreator < matlab.apps.App
         end
 
         % Button pushed function: RenderButton
-        function RenderButtonPushed(app, event)
+        function RenderButtonPushed(app, ~)
             app.requestRender();
         end
 
         % Button pushed function: CancelButton
-        function CancelButtonPushed(app, event)
+        function CancelButtonPushed(app, ~)
             app.cancelRender();
         end
 
         % Button pushed function: ResetViewButton
-        function ResetViewButtonPushed(app, event)
+        function ResetViewButtonPushed(app, ~)
             app.FullViewMode = true;
             app.PresetDropDown.Value = app.fullViewPresetName();
             app.requestRender();
         end
 
         % Button pushed function: SaveButton
-        function SaveButtonPushed(app, event)
+        function SaveButtonPushed(app, ~)
             if isempty(app.Result)
                 uialert(app.UIFigure, "Nothing to save yet. Wait for the first render to finish.", "Save PNG", Icon="info");
                 return
